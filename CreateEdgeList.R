@@ -1,8 +1,9 @@
-CreateEdgeList <- function(start.users,  # character vector of screenNames is IDs
+CreateEdgeList <- function(start.users,  # character vector of screenNames or IDs
                            index.csv,  # csv about users
                            edge.list.csv,  # csv where edgelist should be stored 
                            cainfo,  # where is SSL cerification file
-                           number.to.check=length(start.users)  # to definiate end
+                           number.to.check=length(start.users)){  # to definiate end
+
 
   ##################               #######################
   # TODO: handling errors in index.csv and edge.list.csv #
@@ -11,15 +12,15 @@ CreateEdgeList <- function(start.users,  # character vector of screenNames is ID
 
   # Checking inputs
   # start.users
-  if(!is.character(start.users) || !is.null(start.users)){
-    stop("start.users should be as character, or NULL!")
+  if(!is.character(start.users)){
+    stop("start.users should be as character!")
     }
   # index.csv
   if(!is.character(index.csv) || !is.null(index.csv)){
     stop("index.csv should be as character, or NULL!")
     }
-  # edgel.list.csv
-  if(!is.character(edge.list.csv))){
+  # edge.list.csv
+  if(!is.character(edge.list.csv)){
     stop("edge.list.csv should be as character!")
     }
   # cainfo
@@ -43,8 +44,6 @@ CreateEdgeList <- function(start.users,  # character vector of screenNames is ID
               quote=TRUE)
       warning("No index file found, new index file created.",
               call.=FALSE)
-      } else{
-      append.index <- TRUE
       }
     write.index <- TRUE
     }
@@ -59,14 +58,12 @@ CreateEdgeList <- function(start.users,  # character vector of screenNames is ID
               quote=TRUE)
       warning("No index file found, new edge list created.",
               call.=FALSE)
-      } else{
-      append.edge.list <- TRUE
       }
 
   # Initiate the index:
   start.users.id <- lookupUsers(start.users, cainfo=cainfo)
   start.users.id <- laply(start.users.id, "[[", "id")
-  if(append.index){
+  if(write.index){
     user.index <- read.csv(index.csv)
     user.index <- rbind(user.index,data.frame(user=start.users.id[
                     !(start.users.id %in% as.character(user.index$user))
@@ -74,6 +71,8 @@ CreateEdgeList <- function(start.users,  # character vector of screenNames is ID
                                               chkd=FALSE))
     } else{
     user.index <- data.frame(user=start.users.id, chkd=FALSE)
+    index.csv <- "tmp.user.index.csv"
+    }
   write.csv(user.index, file=index.csv)
   # clean memory
   rm(start.users.id, start.users)
@@ -98,8 +97,29 @@ CreateEdgeList <- function(start.users,  # character vector of screenNames is ID
     user.friend <- user$getFriendsIds(cainfo=cainfo)
     user.follower <- user$getFollowerIDs(cainfo=cainfo)
     # create edgelist and write to edge.list.csv
+    out.edges <- data.frame(source=user$id,
+                            target=user.friend)
+    in.edges  <- data.frame(source=user.follower,
+                            target=user$id)
+    edge.list <- rbind(out.edges, in.edges)
+    write.csv(edge.list, file=edge.list.csv, append=RUE)
+    # clear edgelist from memory
+    rm(edge.list, out.edges, in.edges)
     
+    # update index.csv
+    new.users <- unique(c(user.friend, user.follower))
+    new.users <- new.users[new.users %in% as.character(user.index$user)]
+    write.csv(data.frame(user=new.users, chkd=FALSE),
+              file=index.csv,
+              append=TRUE)
+    # update the number of checked users
+    checked <- sum(user.index$chkd)
+    # clear memory:
+    rm(new.users)
 
+    # break the loop if we have checked evey user:
+    if(!(sum(user.index$chkd == FALSE))){
+      break()
+      }
     }
-  
   }
