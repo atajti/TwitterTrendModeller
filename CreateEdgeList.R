@@ -4,12 +4,6 @@ CreateEdgeList <- function(start.users,  # character vector of screenNames or ID
                            cainfo,  # where is SSL cerification file
                            number.to.check=length(start.users)){  # to definiate end
 
-
-  ##################               #######################
-  # TODO: handling errors in index.csv and edge.list.csv #
-  #       solved by file.exists()                        #
-  ##################               #######################
-
   # Checking inputs
   # start.users
   if(!is.character(start.users)){
@@ -26,7 +20,7 @@ CreateEdgeList <- function(start.users,  # character vector of screenNames or ID
   # cainfo
   if(!is.character(cainfo)){
     stop("cainfo should be as character!")
-    }
+    }	
   # number.to.check
   if(!is.numeric(number.to.check) || (number.to.check %% 1) != 0){
     stop("number.to.check should be integer!")
@@ -38,7 +32,7 @@ CreateEdgeList <- function(start.users,  # character vector of screenNames or ID
       write.table(data.frame(user="user", chkd="chkd"),
               file=index.csv,
               row.names=FALSE,
-              append=false,
+              append=FALSE,
               col.names=FALSE,
               sep=",",
               quote=TRUE)
@@ -46,22 +40,22 @@ CreateEdgeList <- function(start.users,  # character vector of screenNames or ID
               call.=FALSE)
       }
     write.index <- TRUE
-    }
-    if(is.null(index.csv)){
+    } else{
       write.index <- FALSE
-      }
-    # Checking edge.list.csv
-    if(!file.exists(edge.list.csv)){
-      write.table(data.frame(source="source", target="target"),
-              file=edge.list.csv,
-              row.names=FALSE,
-              append=FALSE,
-              col.names=FALSE,
-              sep=",",
-              quote=TRUE)
-      warning("No index file found, new edge list created.",
-              call.=FALSE)
-      }
+      index.csv <- "tmp.index.csv"
+    }
+  # Checking edge.list.csv
+  if(!file.exists(edge.list.csv)){
+    write.table(data.frame(source="source", target="target"),
+            file=edge.list.csv,
+            row.names=FALSE,
+            append=FALSE,
+            col.names=FALSE,
+            sep=",",
+            quote=TRUE)
+    warning("No file found, new edge list created.",
+            call.=FALSE)
+    }
 
   # Initiate the index:
   start.users.id <- lookupUsers(start.users, cainfo=cainfo)
@@ -76,7 +70,13 @@ CreateEdgeList <- function(start.users,  # character vector of screenNames or ID
     user.index <- data.frame(user=start.users.id, chkd=FALSE)
     index.csv <- "tmp.user.index.csv"
     }
-  write.csv(user.index, file=index.csv)
+  write.table(user.index,
+              file=index.csv,
+              row.names=FALSE,
+              append=FALSE,
+              col.names=TRUE,
+              sep=",",
+              quote=TRUE)
   # clean memory
   rm(start.users.id, start.users)
 
@@ -95,32 +95,53 @@ CreateEdgeList <- function(start.users,  # character vector of screenNames or ID
     # read the index.csv
     user.index <- read.csv(index.csv)
     # get the earliest user and its friends and followers
-    user <- getUser(users.index$user[min(which(user.index$chkd == FALSE))],
+    user <- getUser(user.index$user[min(which(user.index$chkd == FALSE))],
+                    blockOnRateLimit=TRUE,
                     cainfo=cainfo)
-    user.friend <- user$getFriendsIds(cainfo=cainfo)
-    user.follower <- user$getFollowerIDs(cainfo=cainfo)
+    user.friend <- user$getFriendIDs(blockOnRateLimit=TRUE,
+                                     cainfo=cainfo)
+    user.follower <- user$getFollowerIDs(blockOnRateLimit=TRUE,
+                                         cainfo=cainfo)
+
     # create edgelist and write to edge.list.csv
     out.edges <- data.frame(source=user$id,
                             target=user.friend)
     in.edges  <- data.frame(source=user.follower,
                             target=user$id)
     edge.list <- rbind(out.edges, in.edges)
-    write.csv(edge.list, file=edge.list.csv, append=RUE)
+    write.table(edge.list,
+                file=edge.list.csv,
+                append=TRUE,
+                row.names=FALSE,
+                col.names=FALSE,
+                sep=",",
+                quote=TRUE)
     # clear edgelist from memory
     rm(edge.list, out.edges, in.edges)
     
     # update index.csv
     new.users <- unique(c(user.friend, user.follower))
-    new.users <- new.users[new.users %in% as.character(user.index$user)]
-    write.csv(data.frame(user=new.users, chkd=FALSE),
+    new.users <- new.users[!(new.users %in% as.character(user.index$user))]
+    user.index[user.index$user == user$id, "chkd"] <- TRUE
+    write.table(rbind(user.index,
+                      data.frame(user=new.users, chkd=rep(FALSE,times=length(new.users)))),
               file=index.csv,
-              append=TRUE)
+              append=FALSE,
+              row.names=FALSE,
+              col.name=TRUE,
+              sep=",",
+              quote=TRUE)
+    user.index <- read.csv(index.csv)
+
+
     # update the number of checked users
     checked <- sum(user.index$chkd)
+#feedback
+print(paste("User ", checked, " checked.", sep=""))
     # clear memory:
     rm(new.users)
 
-    # break the loop if we have checked evey user:
+    # break the loop if we have checked every user:
     if(!(sum(user.index$chkd == FALSE))){
       break()
       }
