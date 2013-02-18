@@ -29,13 +29,13 @@ try twitteR package (Friend = Following) source: [twitteR.pdf] [twitteR]
 ```{r register my Twitter API after registrating it on Twitter}
 # library(twitteR)
 # library(ROAuth)
-# Auth <- OAuthFactory$new(consumerKey="KpD4p9Cb3g2si3d7f9Rnww",
-#                        consumerSecret="GE2pz5eEnaX6g3Lj8cB5QYz08vsCNs5IGvgd6t2A7Y",
+# Auth <- OAuthFactory$new(consumerKey="XXX",
+#                        consumerSecret="XXX",
 #                         requestURL="https://api.twitter.com/oauth/request_token",
 #                         accessURL="https://api.twitter.com/oauth/access_token",
 #                         authURL="https://api.twitter.com/oauth/authorize")
-# Auth$oauthKey="379676999-u5i2olokKJ71PXtGLXeGcVSK2RLYxM2p2Ggxlmus"
-# Auth$oauthSecret="VHMdkufsaKslvnwDLHHTVgxr3eVyQmzANwtacvaV8wc"
+# Auth$oauthKey="XXX"
+# Auth$oauthSecret="XXX"
 # Auth$handshake(cainfo="doga/crawler/cacert.perm")
 # save(Auth,file="doga/crawler/Auth.api")
 ```
