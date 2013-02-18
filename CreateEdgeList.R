@@ -16,7 +16,7 @@ CreateEdgeList <- function(start.users,  # character vector of screenNames or ID
     stop("start.users should be as character!")
     }
   # index.csv
-  if(!is.character(index.csv) || !is.null(index.csv)){
+  if(!is.character(index.csv) && !is.null(index.csv)){
     stop("index.csv should be as character, or NULL!")
     }
   # edge.list.csv
@@ -47,6 +47,9 @@ CreateEdgeList <- function(start.users,  # character vector of screenNames or ID
       }
     write.index <- TRUE
     }
+    if(is.null(index.csv)){
+      write.index <- FALSE
+      }
     # Checking edge.list.csv
     if(!file.exists(edge.list.csv)){
       write.table(data.frame(source="source", target="target"),
@@ -78,7 +81,7 @@ CreateEdgeList <- function(start.users,  # character vector of screenNames or ID
   rm(start.users.id, start.users)
 
   # raise Nmax with the number of users already checked
-  Nmax <- Nmax + sum(user.index$chkd)
+  number.to.check <- number.to.check + sum(user.index$chkd)
   # create a wariable which stores the number of checked users.
   checked <- sum(user.index$chkd)
   # clear user.index
@@ -88,7 +91,7 @@ CreateEdgeList <- function(start.users,  # character vector of screenNames or ID
   # so I will have to check one by one.
   # I could get more User,
   # but there is a smaller limit for friends and followers.
-  while(checked < Nmax){
+  while(checked < number.to.check){
     # read the index.csv
     user.index <- read.csv(index.csv)
     # get the earliest user and its friends and followers
@@ -121,5 +124,14 @@ CreateEdgeList <- function(start.users,  # character vector of screenNames or ID
     if(!(sum(user.index$chkd == FALSE))){
       break()
       }
+    }
+  #return user.index if path is null
+  if(!write.index){
+    user.index <- read.csv(index.csv)
+    unlink(index.csv)
+    return(user.index)
+    } else{
+    print(paste("Index file at: ", index.csv,
+                "Edgelist at: ", edge.list.csv, sep=""))
     }
   }
